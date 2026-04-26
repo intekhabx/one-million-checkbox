@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ONE MILLION CHECKBOX</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <h1>ONE MILLION CHECKBOX</h1>
+  <div class="sub-heading">
+    <strong>Active Users <span id="active-user">0</span></strong>
+    <strong>Total Checked <span id="total-checked">0</span></strong>
+  </div>
+  <div class="container"></div>
+
+  <div id="sign">
+  <span class="inner">
+    made with <span class="heart">❤️</span>by
+    <a href="https://github.com/intekhabx">intekhabx</a>
+  </span>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    // const socket = io()
+    const socket = io('http://localhost:8000');
+
+    const container = document.querySelector('.container');
+    const totalCheckedTag = document.getElementById('total-checked');
+
+    (function (){
+
+      const totalCheckboxFragment = document.createDocumentFragment();
+
+      for(let i=0; i<10000; i++){
+        const input = document.createElement('input');
+        input.setAttribute('id', i+1);
+        input.type = "checkbox";
+        totalCheckboxFragment.appendChild(input);
+      }
+
+      container.appendChild(totalCheckboxFragment);
+
+
+      container.addEventListener("click", (e)=>{
+        if(e.target.type === "checkbox"){
+          socket.emit("user:click", {id: e.target.id, isChecked: e.target.checked});
+        }
+      })
+    })();
+
+    socket.on('server:update', (data)=>{
+      const {isChecked, id} = data;
+
+      const box = document.getElementById(id);
+      if(isChecked){
+        box.checked = true;
+        totalCheckedTag.textContent = Number(totalCheckedTag.textContent) + 1;
+      }
+      else{
+        box.checked = false;
+        totalCheckedTag.textContent = Number(totalCheckedTag.textContent) - 1;
+      }
+    })
+
+
+
+    // when new user connect (checked box marked as checked)
+    async function fetchCheckedBox(){
+      const res = await fetch(`http://localhost:8000/checked-box`);
+      const data = await res.json();
+      // console.log(data);
+
+      for(let i=0; i<data.length; i++){
+        const id = Number(data[i]);
+
+        document.getElementById(id).checked = 'checked';
+      }
+
+      //total-checked
+      totalCheckedTag.textContent = data.length;
+    };
+    fetchCheckedBox();
+
+
+    //for active user
+    socket.on('server:active', (data)=>{
+      document.getElementById('active-user').innerText = data;
+    })
+
+  </script>
+</body>
+</html>
