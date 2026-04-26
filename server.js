@@ -1,9 +1,10 @@
+import 'dotenv/config'
 import express from 'express';
 import { Server } from 'socket.io';
 import cors from 'cors';
 import http from 'http';
 
-const PORT = 8000;
+const PORT = process.env.PORT ?? 8000;
 
 (async function () {
   const app = express();
