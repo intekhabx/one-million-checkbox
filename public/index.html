@@ -12,7 +12,10 @@
     <strong>Active Users <span id="active-user">0</span></strong>
     <strong>Total Checked <span id="total-checked">0</span></strong>
   </div>
-  <div class="container"></div>
+  <div class="container">
+    <!-- here all checkbox will insert -->
+    <div id="watcher"><!-- last div to watch the checkbox (it always present in last) --></div>
+  </div>
 
   <div id="sign">
   <span class="inner">
@@ -28,40 +31,72 @@
 
     const container = document.querySelector('.container');
     const totalCheckedTag = document.getElementById('total-checked');
+    const watcher = document.getElementById('watcher')
+    const TOTAL = 10_000_000;
+    const BATCH_SIZE = 2000; //2000 checkbox load hoga one batch me
+    let currentIndex = 0; //kitna checkbox render hua hai
+    const alreadyChecked = [];
 
-    (function (){
+    function renderBatch(){
+      if(currentIndex >= TOTAL){
+        observer.unobserve(watcher) //observe krna stop krdo
+        return;
+      }
 
       const totalCheckboxFragment = document.createDocumentFragment();
 
-      for(let i=0; i<10000; i++){
+      for(let i= currentIndex; i< currentIndex + BATCH_SIZE && i < TOTAL; i++){
         const input = document.createElement('input');
         input.setAttribute('id', i+1);
         input.type = "checkbox";
         totalCheckboxFragment.appendChild(input);
       }
 
-      container.appendChild(totalCheckboxFragment);
-
+      container.insertBefore(totalCheckboxFragment, watcher); //container ke andar watcher tag se pehle insert karo
+      currentIndex += BATCH_SIZE; // currindex ko batch size se update kro
+    }
 
       container.addEventListener("click", (e)=>{
         if(e.target.type === "checkbox"){
           socket.emit("user:click", {id: e.target.id, isChecked: e.target.checked});
         }
       })
-    })();
+
+
+    //observer code
+    const observer = new IntersectionObserver((entries)=>{ //to observe the watcher
+      entries.forEach((entry)=>{
+        if(entry.isIntersecting){ //watcher jab viewport me aaye
+          renderBatch() // render new batch
+          for (const id of alreadyChecked) {
+            if(id <= currentIndex){
+              document.getElementById(id).checked = true;
+            }
+          }
+        }
+      })
+    }, {rootMargin: '200px'}) //watcher dikhne se 200px pehle render start hoga
+    
+    renderBatch(); // render batch first time without start the observing
+    observer.observe(watcher); //observe starts 
 
     socket.on('server:update', (data)=>{
       const {isChecked, id} = data;
 
       const box = document.getElementById(id);
-      if(isChecked){
-        box.checked = true;
-        totalCheckedTag.textContent = Number(totalCheckedTag.textContent) + 1;
+      if(!box){
+        if(isChecked){
+          alreadyChecked.push(id);
+        }
+        else{
+          const index = alreadyChecked.indexOf(id);
+          if(index !== -1) alreadyChecked.splice(index, 1);
+        }
       }
       else{
-        box.checked = false;
-        totalCheckedTag.textContent = Number(totalCheckedTag.textContent) - 1;
+        box.checked = isChecked;
       }
+      totalCheckedTag.textContent = Number(totalCheckedTag.textContent) + (isChecked ? 1 : -1);
     })
 
 
@@ -74,8 +109,10 @@
 
       for(let i=0; i<data.length; i++){
         const id = Number(data[i]);
-
-        document.getElementById(id).checked = 'checked';
+        alreadyChecked.push(id);
+        if(id <= currentIndex){
+          document.getElementById(id).checked = 'checked';
+        }
       }
 
       //total-checked
