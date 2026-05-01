@@ -1,9 +1,11 @@
 import { publisher, subscriber, redis } from './redis-connection.js';
 
 
+export const STATE_ARRAY_KEY = "redis-state-array";
+
+
 async function initRedisPubSub(io){
-  //we can also store in redis
-  const stateArray = [];
+
   const ACTIVE_USER_KEY = "internal-server:active:user";
   const timeGap = 5 * 1000; //5sec
 
@@ -14,11 +16,10 @@ async function initRedisPubSub(io){
       const {id, isChecked} = JSON.parse(message)
 
       if(isChecked){
-        stateArray.push(id);
+        await redis.rpush(STATE_ARRAY_KEY, id); //auto array creation and insert id
       }
       else{
-        const index = stateArray.indexOf(id);
-        stateArray.splice(index, 1);
+        await redis.lrem(STATE_ARRAY_KEY, 1, id); //remove first id -leftremove
       }
       io.emit('server:update', JSON.parse(message));
     }

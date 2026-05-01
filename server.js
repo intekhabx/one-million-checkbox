@@ -4,6 +4,8 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 import http from 'http';
 import initRedisPubSub from './redis/pub-sub.redis.js';
+import { redis } from './redis/redis-connection.js';
+import {STATE_ARRAY_KEY} from './redis/pub-sub.redis.js'
 
 const PORT = process.env.PORT ?? 8000;
 
@@ -27,8 +29,9 @@ const PORT = process.env.PORT ?? 8000;
   initRedisPubSub(io);
 
   //route for finding the total checked box
-  app.get('/checked-box', (req, res)=>{
-    return res.status(200).send(stateArray)
+  app.get('/checked-box', async (req, res)=>{
+    const stateArray = await redis.lrange(STATE_ARRAY_KEY, 0, -1); //give all state array element
+    return res.status(200).send(stateArray);
   })
 
 
