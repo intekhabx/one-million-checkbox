@@ -126,6 +126,11 @@
       document.getElementById('active-user').innerText = data;
     })
 
+    // rate limiting
+    socket.on('server:error', (message)=>{
+      alert(message);
+    })
+
   </script>
 </body>
 </html>

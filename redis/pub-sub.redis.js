@@ -5,6 +5,7 @@ async function initRedisPubSub(io){
   //we can also store in redis
   const stateArray = [];
   const ACTIVE_USER_KEY = "internal-server:active:user";
+  const timeGap = 5 * 1000; //5sec
 
 
   await subscriber.subscribe("internal-server:checkbox:click", "internal-server:active:user");
@@ -40,7 +41,22 @@ async function initRedisPubSub(io){
 
     socket.on('user:click', async (data)=>{
       // console.log(data);
-      await publisher.publish("internal-server:checkbox:click", JSON.stringify(data));
+      // rate limiting
+      const RATE_LIMIT_KEY = `rate-limiting-${socket.id}`;
+      const prevClickTime = await redis.get(RATE_LIMIT_KEY);
+      if(prevClickTime){
+        const currClickTime = Date.now();
+        if(currClickTime - prevClickTime > timeGap){
+          await redis.set(RATE_LIMIT_KEY, currClickTime);
+          await publisher.publish("internal-server:checkbox:click", JSON.stringify(data));
+          return;
+        }
+        socket.emit("server:error", `next click will be available ${timeGap/1000} sec after previous click`);
+      }
+      else{
+        await redis.set(RATE_LIMIT_KEY, Date.now())
+        await publisher.publish("internal-server:checkbox:click", JSON.stringify(data));
+      }
     })
 
 
