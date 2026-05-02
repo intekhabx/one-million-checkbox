@@ -44,20 +44,34 @@ async function initRedisPubSub(io){
       // console.log(data);
       // rate limiting
       const RATE_LIMIT_KEY = `rate-limiting-${socket.id}`;
-      const prevClickTime = await redis.get(RATE_LIMIT_KEY);
-      if(prevClickTime){
-        const currClickTime = Date.now();
-        if(currClickTime - prevClickTime > timeGap){
-          await redis.set(RATE_LIMIT_KEY, currClickTime);
-          await publisher.publish("internal-server:checkbox:click", JSON.stringify(data));
-          return;
-        }
-        socket.emit("server:error", `next click will be available ${timeGap/1000} sec after previous click`);
-      }
-      else{
-        await redis.set(RATE_LIMIT_KEY, Date.now())
+
+      const isAllowed = await redis.set(RATE_LIMIT_KEY,"1",
+              "NX", //creae if not exists
+              "PX", //ttl in milisecond
+              timeGap //remove after 5 sec
+              );
+
+      if(isAllowed){
         await publisher.publish("internal-server:checkbox:click", JSON.stringify(data));
       }
+      else{
+        socket.emit("server:error", `next click will be available ${timeGap/1000} sec after previous click`);
+      }
+      // rate limiting--
+      // const prevClickTime = await redis.get(RATE_LIMIT_KEY);
+      // if(prevClickTime){
+      //   const currClickTime = Date.now();
+      //   if(currClickTime - prevClickTime > timeGap){
+      //     await redis.set(RATE_LIMIT_KEY, currClickTime);
+      //     await publisher.publish("internal-server:checkbox:click", JSON.stringify(data));
+      //     return;
+      //   }
+      //   socket.emit("server:error", `next click will be available ${timeGap/1000} sec after previous click`);
+      // }
+      // else{
+      //   await redis.set(RATE_LIMIT_KEY, Date.now())
+      //   await publisher.publish("internal-server:checkbox:click", JSON.stringify(data));
+      // }
     })
 
 
