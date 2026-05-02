@@ -36,6 +36,7 @@
     const BATCH_SIZE = 2000; //2000 checkbox load hoga one batch me
     let currentIndex = 0; //kitna checkbox render hua hai
     const alreadyChecked = [];
+    const gapTime = 5 * 1000; //5sec --rate-limiting
 
     function renderBatch(){
       if(currentIndex >= TOTAL){
@@ -56,11 +57,25 @@
       currentIndex += BATCH_SIZE; // currindex ko batch size se update kro
     }
 
-      container.addEventListener("click", (e)=>{
-        if(e.target.type === "checkbox"){
+    if(!localStorage.getItem("prevClick")){
+      localStorage.setItem("prevClick", 0);
+    }
+
+    container.addEventListener("click", (e)=>{
+      if(e.target.type === "checkbox"){
+        // add rate-limiting in frontend side
+        const prevClick = Number(localStorage.getItem("prevClick"));
+        const currClick = Date.now();
+        if(currClick - prevClick > gapTime){
+          localStorage.setItem("prevClick", currClick);
           socket.emit("user:click", {id: e.target.id, isChecked: e.target.checked});
         }
-      })
+        else{
+          alert(`next click will be available ${gapTime/1000} sec after previous click`);
+          e.target.checked = false;
+        }
+      }
+    })
 
 
     //observer code
