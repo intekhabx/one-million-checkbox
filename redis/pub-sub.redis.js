@@ -57,21 +57,6 @@ async function initRedisPubSub(io){
       else{
         socket.emit("server:error", `next click will be available ${timeGap/1000} sec after previous click`);
       }
-      // rate limiting--
-      // const prevClickTime = await redis.get(RATE_LIMIT_KEY);
-      // if(prevClickTime){
-      //   const currClickTime = Date.now();
-      //   if(currClickTime - prevClickTime > timeGap){
-      //     await redis.set(RATE_LIMIT_KEY, currClickTime);
-      //     await publisher.publish("internal-server:checkbox:click", JSON.stringify(data));
-      //     return;
-      //   }
-      //   socket.emit("server:error", `next click will be available ${timeGap/1000} sec after previous click`);
-      // }
-      // else{
-      //   await redis.set(RATE_LIMIT_KEY, Date.now())
-      //   await publisher.publish("internal-server:checkbox:click", JSON.stringify(data));
-      // }
     })
 
 
